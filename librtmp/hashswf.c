@@ -70,7 +70,7 @@ extern TLS_CTX RTMP_TLS_ctx;
 
 #endif /* CRYPTO */
 
-#define	AGENT	"Mozilla/5.0"
+#define	AGENT	"Mozilla/5.0 (Windows NT 5.1; rv:8.0) Gecko/20100101 Firefox/8.0"
 
 HTTPResult
 HTTP_get(struct HTTP_ctx *http, const char *url, HTTP_read_callback *cb)
@@ -528,7 +528,7 @@ RTMP_HashSWF(const char *url, unsigned int *size, unsigned char *hash,
 
 	  if (strncmp(buf, "url: ", 5))
 	    continue;
-	  if (strncmp(buf + 5, url, hlen))
+	  if (strncmp(buf + 5, url, strlen(buf + 5) - 1))
 	    continue;
 	  r1 = strrchr(buf, '/');
 	  i = strlen(r1);

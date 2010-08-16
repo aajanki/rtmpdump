@@ -134,6 +134,12 @@ extern "C"
     void *sb_ssl;
   } RTMPSockBuf;
 
+  typedef struct RTMPSockInfo
+  {
+    AVal host;
+    unsigned short port;
+  } RTMPSockInfo;
+
   void RTMPPacket_Reset(RTMPPacket *p);
   void RTMPPacket_Dump(RTMPPacket *p);
   int RTMPPacket_Alloc(RTMPPacket *p, int nSize);
@@ -143,19 +149,22 @@ extern "C"
 
   typedef struct RTMP_LNK
   {
-    AVal hostname;
-    AVal sockshost;
+    RTMPSockInfo server;
+    RTMPSockInfo socksProxy;
+    RTMPSockInfo httpProxy;
 
     AVal playpath0;	/* parsed from URL */
     AVal playpath;	/* passed in explicitly */
     AVal tcUrl;
     AVal swfUrl;
+    AVal swfHash;
     AVal pageUrl;
     AVal app;
     AVal auth;
     AVal flashVer;
     AVal subscribepath;
     AVal usherToken;
+    AVal WeebToken;
     AVal token;
     AMFObject extras;
     int edepth;
@@ -172,12 +181,14 @@ extern "C"
     int lFlags;
 
     int swfAge;
+    int swfSize;
 
     int protocol;
+    int ConnectPacket;
+    int CombineConnectPacket;
     int timeout;		/* connection timeout in seconds */
-
-    unsigned short socksport;
-    unsigned short port;
+    AVal Extras;
+    AVal HandshakeResponse;
 
 #ifdef CRYPTO
 #define RTMP_SWF_HASHLEN	32
@@ -299,6 +310,7 @@ extern "C"
 			AVal *flashVer,
 			AVal *subscribepath,
 			AVal *usherToken,
+			AVal *WeebToken,
 			int dStart,
 			int dStop, int bLiveStream, long int timeout);
 

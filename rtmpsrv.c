@@ -96,9 +96,18 @@ STREAMING_SERVER *rtmpServer = 0;	// server structure pointer
 STREAMING_SERVER *startStreaming(const char *address, int port);
 void stopStreaming(STREAMING_SERVER * server);
 void AVreplace(AVal *src, const AVal *orig, const AVal *repl);
+char *strreplace(char *srcstr, int srclen, char *orig, char *repl);
+AVal StripParams(AVal *src);
+int file_exists(const char *fname);
 
 static const AVal av_dquote = AVC("\"");
 static const AVal av_escdquote = AVC("\\\"");
+#ifdef WIN32
+static const AVal av_caret = AVC("^");
+static const AVal av_esccaret = AVC("^^");
+static const AVal av_pipe = AVC("|");
+static const AVal av_escpipe = AVC("^|");
+#endif
 
 typedef struct
 {
@@ -271,7 +280,7 @@ static int
 SendPlayStart(RTMP *r)
 {
   RTMPPacket packet;
-  char pbuf[512], *pend = pbuf+sizeof(pbuf);
+  char pbuf[1024], *pend = pbuf + sizeof (pbuf);
 
   packet.m_nChannel = 0x03;     // control channel (invoke)
   packet.m_headerType = 1; /* RTMP_PACKET_SIZE_MEDIUM; */
@@ -303,7 +312,7 @@ static int
 SendPlayStop(RTMP *r)
 {
   RTMPPacket packet;
-  char pbuf[512], *pend = pbuf+sizeof(pbuf);
+  char pbuf[1024], *pend = pbuf + sizeof (pbuf);
 
   packet.m_nChannel = 0x03;     // control channel (invoke)
   packet.m_headerType = 1; /* RTMP_PACKET_SIZE_MEDIUM; */
@@ -585,6 +594,10 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
       AVal usherToken;
       AMFProp_GetString(AMF_GetProp(&obj, NULL, 3), &usherToken);
       AVreplace(&usherToken, &av_dquote, &av_escdquote);
+#ifdef WIN32
+      AVreplace(&usherToken, &av_caret, &av_esccaret);
+      AVreplace(&usherToken, &av_pipe, &av_escpipe);
+#endif
       server->arglen += 6 + usherToken.av_len;
       server->argc += 2;
       r->Link.usherToken = usherToken;
@@ -602,6 +615,19 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
       if (obj.o_num > 5)
 	r->Link.length = AMFProp_GetNumber(AMF_GetProp(&obj, NULL, 5));
       */
+#ifdef VLC
+      double StartFlag = -1000;
+#else
+      double StartFlag = 0;
+#endif
+      AMFObjectProperty *Start = AMF_GetProp(&obj, NULL, 4);
+      if (!(Start->p_type == AMF_INVALID))
+	StartFlag = AMFProp_GetNumber(Start);
+      if (StartFlag < 0)
+	{
+	  server->arglen += 7;
+	  server->argc += 1;
+	}
       if (r->Link.tcUrl.av_len)
 	{
 	  len = server->arglen + r->Link.playpath.av_len + 4 +
@@ -619,6 +645,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	  argv[argc].av_val = ptr + 1;
 	  argv[argc++].av_len = 2;
 	  argv[argc].av_val = ptr + 5;
+	  r->Link.tcUrl = StripParams(&r->Link.tcUrl);
 	  ptr += sprintf(ptr," -r \"%s\"", r->Link.tcUrl.av_val);
 	  argv[argc++].av_len = r->Link.tcUrl.av_len;
 
@@ -643,6 +670,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	      argv[argc].av_val = ptr + 1;
 	      argv[argc++].av_len = 2;
 	      argv[argc].av_val = ptr + 5;
+	      r->Link.swfUrl = StripParams(&r->Link.swfUrl);
 	      ptr += sprintf(ptr, " -W \"%s\"", r->Link.swfUrl.av_val);
 	      argv[argc++].av_len = r->Link.swfUrl.av_len;
 	    }
@@ -665,10 +693,17 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	      r->Link.usherToken.av_val = NULL;
 	      r->Link.usherToken.av_len = 0;
 	    }
-	  if (r->Link.extras.o_num) {
-	    ptr = dumpAMF(&r->Link.extras, ptr, argv, &argc);
-	    AMF_Reset(&r->Link.extras);
-	  }
+	  if (StartFlag < 0)
+	    {
+	      argv[argc].av_val = ptr + 1;
+	      argv[argc++].av_len = 6;
+	      ptr += sprintf(ptr, " --live");
+	    }
+	  if (r->Link.extras.o_num)
+	    {
+	      ptr = dumpAMF(&r->Link.extras, ptr, argv, &argc);
+	      AMF_Reset(&r->Link.extras);
+	    }
 	  argv[argc].av_val = ptr + 1;
 	  argv[argc++].av_len = 2;
 	  argv[argc].av_val = ptr + 5;
@@ -676,7 +711,13 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	    r->Link.playpath.av_len, r->Link.playpath.av_val);
 	  argv[argc++].av_len = r->Link.playpath.av_len;
 
-	  av = r->Link.playpath;
+	  if (r->Link.playpath.av_len)
+	    av = r->Link.playpath;
+	  else
+	    {
+	      av.av_val = "file";
+	      av.av_len = 4;
+	    }
 	  /* strip trailing URL parameters */
 	  q = memchr(av.av_val, '?', av.av_len);
 	  if (q)
@@ -728,7 +769,14 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	  argv[argc++].av_len = 2;
 	  argv[argc].av_val = file;
 	  argv[argc].av_len = av.av_len;
+#ifdef VLC
+	  if (file_exists("C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"))
+	    ptr += sprintf(ptr, " | %s -", "\"C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe\"");
+	  else
+	    ptr += sprintf(ptr, " | %s -", "\"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe\"");
+#else
 	  ptr += sprintf(ptr, " -o %s", file);
+#endif
 	  now = RTMP_GetTime();
 	  if (now - server->filetime < DUPTIME && AVMATCH(&argv[argc], &server->filename))
 	    {
@@ -742,7 +790,23 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	      server->filetime = now;
 	      free(server->filename.av_val);
 	      server->filename = argv[argc++];
+#ifdef VLC
+	      FILE *vlc_cmdfile = fopen("VLC.bat", "w");
+	      char *vlc_batchcmd = strreplace(cmd, 0, "%", "%%");
+	      fprintf(vlc_cmdfile, "%s\n", vlc_batchcmd);
+	      fclose(vlc_cmdfile);
+	      free(vlc_batchcmd);
+	      spawn_dumper(argc, argv, "VLC.bat");
+#else
 	      spawn_dumper(argc, argv, cmd);
+#endif
+
+#ifdef WIN32
+	      // Dump commands to batch file
+	      FILE *cmdfile = fopen("Command.bat", "a");
+	      fprintf(cmdfile, "%s\n", cmd);
+	      fclose(cmdfile);
+#endif
 	    }
 
 	  free(cmd);
@@ -1140,6 +1204,99 @@ main(int argc, char **argv)
     fclose(netstackdump_read);
 #endif
   return nStatus;
+}
+
+char *
+strreplace(char *srcstr, int srclen, char *orig, char *repl)
+{
+  char *ptr = NULL, *sptr = srcstr;
+  int origlen = strlen(orig);
+  int repllen = strlen(repl);
+  if (!srclen)
+    srclen = strlen(srcstr);
+  char *srcend = srcstr + srclen;
+  int dstbuffer = srclen / origlen * repllen;
+  if (dstbuffer < srclen)
+    dstbuffer = srclen;
+  char *dststr = calloc(dstbuffer + 1, sizeof (char));
+  char *dptr = dststr;
+
+  if ((ptr = strstr(srcstr, orig)))
+    {
+      while (ptr < srcend && (ptr = strstr(sptr, orig)))
+	{
+	  int len = ptr - sptr;
+	  memcpy(dptr, sptr, len);
+	  sptr += len + origlen;
+	  dptr += len;
+	  memcpy(dptr, repl, repllen);
+	  dptr += repllen;
+	}
+      memcpy(dptr, sptr, srcend - sptr);
+      return dststr;
+    }
+
+  memcpy(dststr, srcstr, srclen);
+  return dststr;
+}
+
+AVal
+StripParams(AVal *src)
+{
+  AVal str;
+  if (src->av_val)
+    {
+      str.av_val = calloc(src->av_len + 1, sizeof (char));
+      strncpy(str.av_val, src->av_val, src->av_len);
+      str.av_len = src->av_len;
+      char *start = str.av_val;
+      char *end = start + str.av_len;
+      char *ptr = start;
+
+      while (ptr < end)
+	{
+	  if (*ptr == '?')
+	    {
+	      str.av_len = ptr - start;
+	      break;
+	    }
+	  ptr++;
+	}
+      memset(start + str.av_len, 0, 1);
+
+      char *dynamic = strstr(start, "[[DYNAMIC]]");
+      if (dynamic)
+	{
+	  dynamic -= 1;
+	  memset(dynamic, 0, 1);
+	  str.av_len = dynamic - start;
+	  end = start + str.av_len;
+	}
+
+      char *import = strstr(start, "[[IMPORT]]");
+      if (import)
+	{
+	  str.av_val = import + 11;
+	  strcpy(start, "http://");
+	  str.av_val = strcat(start, str.av_val);
+	  str.av_len = strlen(str.av_val);
+	}
+      return str;
+    }
+  str = *src;
+  return str;
+}
+
+int
+file_exists(const char *fname)
+{
+  FILE *file;
+  if ((file = fopen(fname, "r")))
+    {
+      fclose(file);
+      return 1;
+    }
+  return 0;
 }
 
 void
