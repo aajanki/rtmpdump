@@ -963,13 +963,7 @@ main(int argc, char **argv)
 	  break;
 	case 'r':
 	  {
-	    AVal parsedHost, parsedApp, parsedPlaypath;
-	    unsigned int parsedPort = 0;
-	    int parsedProtocol = RTMP_PROTOCOL_UNDEFINED;
-
-	    if (!RTMP_ParseURL
-		(optarg, &parsedProtocol, &parsedHost, &parsedPort,
-		 &parsedPlaypath, &parsedApp))
+	    if (!RTMP_SetupURL(&rtmp, optarg))
 	      {
 		RTMP_Log(RTMP_LOGWARNING, "Couldn't parse the specified url (%s)!",
 		    optarg);
@@ -977,19 +971,15 @@ main(int argc, char **argv)
 	    else
 	      {
 		if (!hostname.av_len)
-		  hostname = parsedHost;
+		  hostname = rtmp.Link.hostname;
 		if (port == -1)
-		  port = parsedPort;
-		if (playpath.av_len == 0 && parsedPlaypath.av_len)
-		  {
-		    playpath = parsedPlaypath;
-		  }
+		  port = rtmp.Link.port;
+		if (playpath.av_len == 0 && rtmp.Link.playpath.av_len)
+		  playpath = rtmp.Link.playpath;
 		if (protocol == RTMP_PROTOCOL_UNDEFINED)
-		  protocol = parsedProtocol;
-		if (app.av_len == 0 && parsedApp.av_len)
-		  {
-		    app = parsedApp;
-		  }
+		  protocol = rtmp.Link.protocol;
+		if (app.av_len == 0 && rtmp.Link.app.av_len)
+		  app = rtmp.Link.app;
 	      }
 	    break;
 	  }
