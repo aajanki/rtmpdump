@@ -32,6 +32,7 @@
 
 #include "librtmp/rtmp_sys.h"
 #include "librtmp/log.h"
+#include "librtmp/plugin.h"
 
 #ifdef WIN32
 #define fseeko fseeko64
@@ -711,6 +712,8 @@ void usage(char *prog)
 	  RTMP_LogPrintf
 	    ("If you don't pass parameters for swfUrl, pageUrl, or auth these properties will not be included in the connect ");
 	  RTMP_LogPrintf("packet.\n\n");
+
+	  RTMPPlugin_OptUsage(RTMP_LOGINFO);
 }
 
 int
