@@ -697,6 +697,8 @@ void usage(char *prog)
 	  RTMP_LogPrintf
 	    ("--jtv|-j JSON           Authentication token for Justin.tv legacy servers\n");
 	  RTMP_LogPrintf
+	    ("--weeb|-J string        Authentication token for weeb.tv servers\n");
+	  RTMP_LogPrintf
 	    ("--hashes|-#             Display progress with hashes, not with the byte counter\n");
 	  RTMP_LogPrintf
 	    ("--buffer|-b             Buffer time in milliseconds (default: %u)\n",
@@ -743,7 +745,8 @@ main(int argc, char **argv)
   AVal hostname = { 0, 0 };
   AVal playpath = { 0, 0 };
   AVal subscribepath = { 0, 0 };
-  AVal usherToken = { 0, 0 }; //Justin.tv auth token
+  AVal usherToken = { 0, 0 }; // Justin.tv auth token
+  AVal WeebToken = { 0, 0 };  // Weeb.tv auth token
   int port = -1;
   int protocol = RTMP_PROTOCOL_UNDEFINED;
   int retries = 0;
@@ -846,12 +849,13 @@ main(int argc, char **argv)
     {"quiet", 0, NULL, 'q'},
     {"verbose", 0, NULL, 'V'},
     {"jtv", 1, NULL, 'j'},
+    {"weeb", 1, NULL, 'J'},
     {0, 0, 0, 0}
   };
 
   while ((opt =
 	  getopt_long(argc, argv,
-		      "hVveqzr:s:t:p:a:b:f:o:u:C:n:c:l:y:Ym:k:d:A:B:T:w:x:W:X:S:#j:",
+		      "hVveqzr:s:t:p:a:b:f:o:u:C:n:c:l:y:Ym:k:d:A:B:T:w:x:W:X:S:#j:J:",
 		      longopts, NULL)) != -1)
     {
       switch (opt)
@@ -1061,6 +1065,9 @@ main(int argc, char **argv)
 	case 'j':
 	  STR2AVAL(usherToken, optarg);
 	  break;
+	case 'J':
+	  STR2AVAL(WeebToken, optarg);
+	  break;
 	default:
 	  RTMP_LogPrintf("unknown option: %c\n", opt);
 	  usage(argv[0]);
@@ -1152,14 +1159,14 @@ main(int argc, char **argv)
 
   if (tcUrl.av_len == 0)
     {
-	  tcUrl.av_len = strlen(RTMPProtocolStringsLower[protocol]) +
-	  	hostname.av_len + app.av_len + sizeof("://:65535/");
+      tcUrl.av_len = strlen(RTMPProtocolStringsLower[protocol]) +
+	      hostname.av_len + app.av_len + sizeof ("://:65535/");
       tcUrl.av_val = (char *) malloc(tcUrl.av_len);
-	  if (!tcUrl.av_val)
-	    return RD_FAILED;
+      if (!tcUrl.av_val)
+	return RD_FAILED;
       tcUrl.av_len = snprintf(tcUrl.av_val, tcUrl.av_len, "%s://%.*s:%d/%.*s",
-	  	   RTMPProtocolStringsLower[protocol], hostname.av_len,
-		   hostname.av_val, port, app.av_len, app.av_val);
+			      RTMPProtocolStringsLower[protocol], hostname.av_len,
+			      hostname.av_val, port, app.av_len, app.av_val);
     }
 
   int first = 1;
@@ -1178,7 +1185,7 @@ main(int argc, char **argv)
 
   RTMP_SetupStream(&rtmp, protocol, &hostname, port, &sockshost, &playpath,
 		   &tcUrl, &swfUrl, &pageUrl, &app, &auth, &swfHash, swfSize,
-		   &flashVer, &subscribepath, &usherToken, dSeek, dStopOffset, bLiveStream, timeout);
+		   &flashVer, &subscribepath, &usherToken, &WeebToken, dSeek, dStopOffset, bLiveStream, timeout);
 
   /* Try to keep the stream moving if it pauses on us */
   if (!bLiveStream && !(protocol & RTMP_FEATURE_HTTP))

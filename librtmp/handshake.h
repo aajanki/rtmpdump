@@ -962,8 +962,18 @@ HandShake(RTMP * r, int FP9HandShake)
     __FUNCTION__);
   RTMP_LogHex(RTMP_LOGDEBUG, reply, RTMP_SIG_SIZE);
 #endif
-  if (!WriteN(r, (char *)reply, RTMP_SIG_SIZE))
-    return FALSE;
+  if (r->Link.CombineConnectPacket)
+    {
+      char *HandshakeResponse = malloc(RTMP_SIG_SIZE);
+      memcpy(HandshakeResponse, (char *) reply, RTMP_SIG_SIZE);
+      r->Link.HandshakeResponse.av_val = HandshakeResponse;
+      r->Link.HandshakeResponse.av_len = RTMP_SIG_SIZE;
+    }
+  else
+    {
+      if (!WriteN(r, (char *) reply, RTMP_SIG_SIZE))
+        return FALSE;
+    }
 
   /* 2nd part of handshake */
   if (ReadN(r, (char *)serversig, RTMP_SIG_SIZE) != RTMP_SIG_SIZE)

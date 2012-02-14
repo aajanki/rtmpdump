@@ -95,7 +95,8 @@ typedef struct
   AVal flashVer;
   AVal token;
   AVal subscribepath;
-  AVal usherToken; //Justin.tv auth token
+  AVal usherToken; // Justin.tv auth token
+  AVal WeebToken;  // Weeb.tv auth token
   AVal sockshost;
   AMFObject extras;
   int edepth;
@@ -553,7 +554,7 @@ void processTCPrequest(STREAMING_SERVER * server,	// server socket and state (ou
   RTMP_Init(&rtmp);
   RTMP_SetBufferMS(&rtmp, req.bufferTime);
   RTMP_SetupStream(&rtmp, req.protocol, &req.hostname, req.rtmpport, &req.sockshost,
-		   &req.playpath, &req.tcUrl, &req.swfUrl, &req.pageUrl, &req.app, &req.auth, &req.swfHash, req.swfSize, &req.flashVer, &req.subscribepath, &req.usherToken, dSeek, req.dStopOffset,
+		   &req.playpath, &req.tcUrl, &req.swfUrl, &req.pageUrl, &req.app, &req.auth, &req.swfHash, req.swfSize, &req.flashVer, &req.subscribepath, &req.usherToken, &req.WeebToken, dSeek, req.dStopOffset,
 		   req.bLiveStream, req.timeout);
   /* backward compatibility, we always sent this as true before */
   if (req.auth.av_len)
@@ -957,6 +958,9 @@ ParseOption(char opt, char *arg, RTMP_REQUEST * req)
     case 'j':
       STR2AVAL(req->usherToken, arg);
       break;
+    case 'J':
+      STR2AVAL(req->WeebToken, arg);
+      break;
     default:
       RTMP_LogPrintf("unknown option: %c, arg: %s\n", opt, arg);
       return FALSE;
@@ -1028,6 +1032,7 @@ main(int argc, char **argv)
     {"quiet", 0, NULL, 'q'},
     {"verbose", 0, NULL, 'V'},
     {"jtv", 1, NULL, 'j'},
+    {"weeb", 1, NULL, 'J'},
     {0, 0, 0, 0}
   };
 
@@ -1040,7 +1045,7 @@ main(int argc, char **argv)
 
   while ((opt =
 	  getopt_long(argc, argv,
-		      "hvqVzr:s:t:p:a:f:u:n:c:l:y:m:d:D:A:B:T:g:w:x:W:X:S:j:", longopts,
+		      "hvqVzr:s:t:p:a:f:u:n:c:l:y:m:d:D:A:B:T:g:w:x:W:X:S:j:J:", longopts,
 		      NULL)) != -1)
     {
       switch (opt)
@@ -1102,6 +1107,8 @@ main(int argc, char **argv)
 	    ("--token|-T key          Key for SecureToken response\n");
 	  RTMP_LogPrintf
 	    ("--jtv|-j JSON           Authentication token for Justin.tv legacy servers\n");
+	  RTMP_LogPrintf
+	    ("--weeb|-J string        Authentication token for weeb.tv servers\n");
 	  RTMP_LogPrintf
 	    ("--buffer|-b             Buffer time in milliseconds (default: %u)\n\n",
 	     defaultRTMPRequest.bufferTime);
