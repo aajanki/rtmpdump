@@ -496,9 +496,9 @@ static struct urlopt {
   { AVC("subscribe"), OFF(Link.subscribepath), OPT_STR, 0,
   	"Stream to subscribe to" },
   { AVC("jtv"),       OFF(Link.usherToken),    OPT_STR, 0,
-	"Justin.tv authentication token" },
+        "Justin.tv authentication token"},
   { AVC("weeb"),      OFF(Link.WeebToken),     OPT_STR, 0,
-	"Weeb.tv authentication token"},
+        "Weeb.tv authentication token"},
   { AVC("token"),     OFF(Link.token),         OPT_STR, 0,
   	"Key for SecureToken response" },
   { AVC("swfVfy"),    OFF(Link.lFlags),        OPT_BOOL, RTMP_LF_SWFV,
@@ -507,9 +507,9 @@ static struct urlopt {
   	"Number of days to use cached SWF hash" },
 #ifdef CRYPTO
   { AVC("swfsize"),   OFF(Link.swfSize),       OPT_INT, 0,
-  	"Size of the decompressed SWF file" },
+        "Size of the decompressed SWF file"},
   { AVC("swfhash"),   OFF(Link.swfHash),       OPT_STR, 0,
-  	"SHA256 hash of the decompressed SWF file" },
+        "SHA256 hash of the decompressed SWF file"},
 #endif
   { AVC("start"),     OFF(Link.seekTime),      OPT_INT, 0,
   	"Stream start position in milliseconds" },
@@ -776,7 +776,7 @@ int RTMP_SetupURL(RTMP *r, char *url)
     {
       int i, j = 0;
       for (i = 0; i < r->Link.swfHash.av_len; i += 2)
-	r->Link.SWFHash[j++] = (HEX2BIN(r->Link.swfHash.av_val[i]) << 4) | HEX2BIN(r->Link.swfHash.av_val[i + 1]);
+        r->Link.SWFHash[j++] = (HEX2BIN(r->Link.swfHash.av_val[i]) << 4) | HEX2BIN(r->Link.swfHash.av_val[i + 1]);
       r->Link.SWFSize = (uint32_t) r->Link.swfSize;
     }
   else if ((r->Link.lFlags & RTMP_LF_SWFV) && r->Link.swfUrl.av_len)
@@ -1335,10 +1335,10 @@ ReadN(RTMP *r, char *buffer, int n)
 		  return 0;
 		}
 	    }
-	  if (r->m_resplen && (r->m_sb.sb_size < r->m_resplen))
-	    if (RTMPSockBuf_Fill(&r->m_sb) < 0)
-	      if (!r->m_sb.sb_timedout)
-		RTMP_Close(r);
+          if (r->m_resplen && (r->m_sb.sb_size < r->m_resplen))
+            if (RTMPSockBuf_Fill(&r->m_sb) < 0)
+              if (!r->m_sb.sb_timedout)
+                RTMP_Close(r);
           avail = r->m_sb.sb_size;
 	  if (avail > r->m_resplen)
 	    avail = r->m_resplen;
@@ -2447,129 +2447,129 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
 	    {
 	      RTMP_SendServerBW(r);
 	      RTMP_SendCtrl(r, 3, 0, 300);
-	    }
-	  if (strstr(host, "tv-stream.to") || strstr(pageUrl, "tv-stream.to"))
-	    {
-	      AVal av_requestAccess = AVC("requestAccess");
-	      AVal av_auth = AVC("h§4jhH43d");
-	      enc = pbuf;
-	      enc = AMF_EncodeString(enc, pend, &av_requestAccess);
-	      enc = AMF_EncodeNumber(enc, pend, 0);
-	      *enc++ = AMF_NULL;
-	      enc = AMF_EncodeString(enc, pend, &av_auth);
-	      av_Command.av_val = pbuf;
-	      av_Command.av_len = enc - pbuf;
-	      SendCustomCommand(r, &av_Command, FALSE);
+            }
+          if (strstr(host, "tv-stream.to") || strstr(pageUrl, "tv-stream.to"))
+            {
+              AVal av_requestAccess = AVC("requestAccess");
+              AVal av_auth = AVC("h§4jhH43d");
+              enc = pbuf;
+              enc = AMF_EncodeString(enc, pend, &av_requestAccess);
+              enc = AMF_EncodeNumber(enc, pend, 0);
+              *enc++ = AMF_NULL;
+              enc = AMF_EncodeString(enc, pend, &av_auth);
+              av_Command.av_val = pbuf;
+              av_Command.av_len = enc - pbuf;
+              SendCustomCommand(r, &av_Command, FALSE);
 
-	      AVal av_getConnectionCount = AVC("getConnectionCount");
-	      enc = pbuf;
-	      enc = AMF_EncodeString(enc, pend, &av_getConnectionCount);
-	      enc = AMF_EncodeNumber(enc, pend, 0);
-	      *enc++ = AMF_NULL;
-	      av_Command.av_val = pbuf;
-	      av_Command.av_len = enc - pbuf;
-	      SendCustomCommand(r, &av_Command, FALSE);
+              AVal av_getConnectionCount = AVC("getConnectionCount");
+              enc = pbuf;
+              enc = AMF_EncodeString(enc, pend, &av_getConnectionCount);
+              enc = AMF_EncodeNumber(enc, pend, 0);
+              *enc++ = AMF_NULL;
+              av_Command.av_val = pbuf;
+              av_Command.av_len = enc - pbuf;
+              SendCustomCommand(r, &av_Command, FALSE);
 
-	      SendGetStreamLength(r);
-	    }
-	  else if (strstr(host, "jampo.com.ua") || strstr(pageUrl, "jampo.com.ua"))
-	    {
-	      SendGetStreamLength(r);
-	    }
-	  else if (strstr(host, "streamscene.cc") || strstr(pageUrl, "streamscene.cc")
-		   || strstr(host, "tsboard.tv") || strstr(pageUrl, "teamstream.in"))
-	    {
-	      AVal av_r = AVC("r");
-	      enc = pbuf;
-	      enc = AMF_EncodeString(enc, pend, &av_r);
-	      enc = AMF_EncodeNumber(enc, pend, 0);
-	      *enc++ = AMF_NULL;
-	      av_Command.av_val = pbuf;
-	      av_Command.av_len = enc - pbuf;
-	      SendCustomCommand(r, &av_Command, FALSE);
+              SendGetStreamLength(r);
+            }
+          else if (strstr(host, "jampo.com.ua") || strstr(pageUrl, "jampo.com.ua"))
+            {
+              SendGetStreamLength(r);
+            }
+          else if (strstr(host, "streamscene.cc") || strstr(pageUrl, "streamscene.cc")
+                   || strstr(host, "tsboard.tv") || strstr(pageUrl, "teamstream.in"))
+            {
+              AVal av_r = AVC("r");
+              enc = pbuf;
+              enc = AMF_EncodeString(enc, pend, &av_r);
+              enc = AMF_EncodeNumber(enc, pend, 0);
+              *enc++ = AMF_NULL;
+              av_Command.av_val = pbuf;
+              av_Command.av_len = enc - pbuf;
+              SendCustomCommand(r, &av_Command, FALSE);
 
-	      SendGetStreamLength(r);
-	    }
-	  else if (strstr(host, "chaturbate.com") || strstr(pageUrl, "chaturbate.com"))
-	    {
-	      AVal av_ModelName;
-	      AVal av_CheckPublicStatus = AVC("CheckPublicStatus");
+              SendGetStreamLength(r);
+            }
+          else if (strstr(host, "chaturbate.com") || strstr(pageUrl, "chaturbate.com"))
+            {
+              AVal av_ModelName;
+              AVal av_CheckPublicStatus = AVC("CheckPublicStatus");
 
-	      if (strlen(pageUrl) > 7)
-		{
-		  strsplit(pageUrl + 7, FALSE, '/', &params);
-		  av_ModelName.av_val = params[1];
-		  av_ModelName.av_len = strlen(params[1]);
+              if (strlen(pageUrl) > 7)
+                {
+                  strsplit(pageUrl + 7, FALSE, '/', &params);
+                  av_ModelName.av_val = params[1];
+                  av_ModelName.av_len = strlen(params[1]);
 
-		  enc = pbuf;
-		  enc = AMF_EncodeString(enc, pend, &av_CheckPublicStatus);
-		  enc = AMF_EncodeNumber(enc, pend, 0);
-		  *enc++ = AMF_NULL;
-		  enc = AMF_EncodeString(enc, pend, &av_ModelName);
-		  av_Command.av_val = pbuf;
-		  av_Command.av_len = enc - pbuf;
+                  enc = pbuf;
+                  enc = AMF_EncodeString(enc, pend, &av_CheckPublicStatus);
+                  enc = AMF_EncodeNumber(enc, pend, 0);
+                  *enc++ = AMF_NULL;
+                  enc = AMF_EncodeString(enc, pend, &av_ModelName);
+                  av_Command.av_val = pbuf;
+                  av_Command.av_len = enc - pbuf;
 
-		  SendCustomCommand(r, &av_Command, FALSE);
-		}
-	    }
-	  /* Weeb.tv specific authentication */
-	  else if (r->Link.WeebToken.av_len)
-	    {
-	      AVal av_Token, av_Username, av_Password;
-	      AVal av_determineAccess = AVC("determineAccess");
+                  SendCustomCommand(r, &av_Command, FALSE);
+                }
+            }
+          /* Weeb.tv specific authentication */
+          else if (r->Link.WeebToken.av_len)
+            {
+              AVal av_Token, av_Username, av_Password;
+              AVal av_determineAccess = AVC("determineAccess");
 
-	      param_count = strsplit(r->Link.WeebToken.av_val, FALSE, ';', &params);
-	      if (param_count >= 1)
-		{
-		  av_Token.av_val = params[0];
-		  av_Token.av_len = strlen(params[0]);
-		}
-	      if (param_count >= 2)
-		{
-		  av_Username.av_val = params[1];
-		  av_Username.av_len = strlen(params[1]);
-		}
-	      if (param_count >= 3)
-		{
-		  av_Password.av_val = params[2];
-		  av_Password.av_len = strlen(params[2]);
-		}
+              param_count = strsplit(r->Link.WeebToken.av_val, FALSE, ';', &params);
+              if (param_count >= 1)
+                {
+                  av_Token.av_val = params[0];
+                  av_Token.av_len = strlen(params[0]);
+                }
+              if (param_count >= 2)
+                {
+                  av_Username.av_val = params[1];
+                  av_Username.av_len = strlen(params[1]);
+                }
+              if (param_count >= 3)
+                {
+                  av_Password.av_val = params[2];
+                  av_Password.av_len = strlen(params[2]);
+                }
 
-	      enc = pbuf;
-	      enc = AMF_EncodeString(enc, pend, &av_determineAccess);
-	      enc = AMF_EncodeNumber(enc, pend, 0);
-	      *enc++ = AMF_NULL;
-	      enc = AMF_EncodeString(enc, pend, &av_Token);
-	      enc = AMF_EncodeString(enc, pend, &av_Username);
-	      enc = AMF_EncodeString(enc, pend, &av_Password);
-	      av_Command.av_val = pbuf;
-	      av_Command.av_len = enc - pbuf;
+              enc = pbuf;
+              enc = AMF_EncodeString(enc, pend, &av_determineAccess);
+              enc = AMF_EncodeNumber(enc, pend, 0);
+              *enc++ = AMF_NULL;
+              enc = AMF_EncodeString(enc, pend, &av_Token);
+              enc = AMF_EncodeString(enc, pend, &av_Username);
+              enc = AMF_EncodeString(enc, pend, &av_Password);
+              av_Command.av_val = pbuf;
+              av_Command.av_len = enc - pbuf;
 
-	      RTMP_Log(RTMP_LOGDEBUG, "WeebToken: %s", r->Link.WeebToken.av_val);
-	      SendCustomCommand(r, &av_Command, FALSE);
-	    }
-	  else
-	    RTMP_SendCreateStream(r);
-	}
+              RTMP_Log(RTMP_LOGDEBUG, "WeebToken: %s", r->Link.WeebToken.av_val);
+              SendCustomCommand(r, &av_Command, FALSE);
+            }
+          else
+            RTMP_SendCreateStream(r);
+        }
       else if (AVMATCH(&methodInvoked, &av_getStreamLength))
-	{
-	  RTMP_SendCreateStream(r);
-	}
+        {
+          RTMP_SendCreateStream(r);
+        }
       else if (AVMATCH(&methodInvoked, &av_createStream))
-	{
-	  r->m_stream_id = (int) AMFProp_GetNumber(AMF_GetProp(&obj, NULL, 3));
+        {
+          r->m_stream_id = (int) AMFProp_GetNumber(AMF_GetProp(&obj, NULL, 3));
 
-	  if (!(r->Link.protocol & RTMP_FEATURE_WRITE))
-	    {
-	      /* Authenticate on Justin.tv legacy servers before sending FCSubscribe */
-	      if (r->Link.usherToken.av_len)
-		SendUsherToken(r, &r->Link.usherToken);
-	      /* Send the FCSubscribe if live stream or if subscribepath is set */
-	      if (r->Link.subscribepath.av_len)
-		SendFCSubscribe(r, &r->Link.subscribepath);
-	      else if ((r->Link.lFlags & RTMP_LF_LIVE) && (!r->Link.WeebToken.av_len))
-		SendFCSubscribe(r, &r->Link.playpath);
-	    }
+          if (!(r->Link.protocol & RTMP_FEATURE_WRITE))
+            {
+              /* Authenticate on Justin.tv legacy servers before sending FCSubscribe */
+              if (r->Link.usherToken.av_len)
+                SendUsherToken(r, &r->Link.usherToken);
+              /* Send the FCSubscribe if live stream or if subscribepath is set */
+              if (r->Link.subscribepath.av_len)
+                SendFCSubscribe(r, &r->Link.subscribepath);
+              else if ((r->Link.lFlags & RTMP_LF_LIVE) && (!r->Link.WeebToken.av_len))
+                SendFCSubscribe(r, &r->Link.playpath);
+            }
 
 	  if (r->Link.protocol & RTMP_FEATURE_WRITE)
 	    {
@@ -2734,31 +2734,31 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
   else if (AVMATCH(&method, &av_sendStatus))
     {
       if (r->Link.WeebToken.av_len)
-	{
-	  AVal av_Code = AVC("code");
-	  AVal av_Authorized = AVC("User.hasAccess");
-	  AVal av_TransferLimit = AVC("User.noPremium.limited");
-	  AVal av_UserLimit = AVC("User.noPremium.tooManyUsers");
-	  AVal av_TimeLeft = AVC("timeLeft");
-	  AVal av_Status, av_ReconnectionTime;
+        {
+          AVal av_Code = AVC("code");
+          AVal av_Authorized = AVC("User.hasAccess");
+          AVal av_TransferLimit = AVC("User.noPremium.limited");
+          AVal av_UserLimit = AVC("User.noPremium.tooManyUsers");
+          AVal av_TimeLeft = AVC("timeLeft");
+          AVal av_Status, av_ReconnectionTime;
 
-	  AMFObject Status;
-	  AMFProp_GetObject(AMF_GetProp(&obj, NULL, 3), &Status);
-	  AMFProp_GetString(AMF_GetProp(&Status, &av_Code, -1), &av_Status);
-	  RTMP_Log(RTMP_LOGINFO, "%.*s", av_Status.av_len, av_Status.av_val);
-	  if (AVMATCH(&av_Status, &av_Authorized))
-	    {
-	      RTMP_Log(RTMP_LOGINFO, "Weeb.tv authentication successful");
-	      RTMP_SendCreateStream(r);
-	    }
-	  else if (AVMATCH(&av_Status, &av_UserLimit))
-	    RTMP_Log(RTMP_LOGINFO, "No free slots available");
-	  else if (AVMATCH(&av_Status, &av_TransferLimit))
-	    {
-	      AMFProp_GetString(AMF_GetProp(&Status, &av_TimeLeft, -1), &av_ReconnectionTime);
-	      RTMP_Log(RTMP_LOGINFO, "Viewing limit exceeded. try again in %.*s minutes.", av_ReconnectionTime.av_len, av_ReconnectionTime.av_val);
-	    }
-	}
+          AMFObject Status;
+          AMFProp_GetObject(AMF_GetProp(&obj, NULL, 3), &Status);
+          AMFProp_GetString(AMF_GetProp(&Status, &av_Code, -1), &av_Status);
+          RTMP_Log(RTMP_LOGINFO, "%.*s", av_Status.av_len, av_Status.av_val);
+          if (AVMATCH(&av_Status, &av_Authorized))
+            {
+              RTMP_Log(RTMP_LOGINFO, "Weeb.tv authentication successful");
+              RTMP_SendCreateStream(r);
+            }
+          else if (AVMATCH(&av_Status, &av_UserLimit))
+            RTMP_Log(RTMP_LOGINFO, "No free slots available");
+          else if (AVMATCH(&av_Status, &av_TransferLimit))
+            {
+              AMFProp_GetString(AMF_GetProp(&Status, &av_TimeLeft, -1), &av_ReconnectionTime);
+              RTMP_Log(RTMP_LOGINFO, "Viewing limit exceeded. try again in %.*s minutes.", av_ReconnectionTime.av_len, av_ReconnectionTime.av_val);
+            }
+        }
     }
   else if (AVMATCH(&method, &av_ReceiveCheckPublicStatus))
     {
@@ -2766,14 +2766,14 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
       AMFProp_GetString(AMF_GetProp(&obj, NULL, 3), &Status);
       param_count = strsplit(Status.av_val, Status.av_len, ',', &params);
       if (strcmp(params[0], "0") == 0)
-	{
-	  RTMP_Log(RTMP_LOGINFO, "Model status is %s", params[1]);
-	  RTMP_Close(r);
-	}
+        {
+          RTMP_Log(RTMP_LOGINFO, "Model status is %s", params[1]);
+          RTMP_Close(r);
+        }
       else
-	{
-	  RTMP_SendCreateStream(r);
-	}
+        {
+          RTMP_SendCreateStream(r);
+        }
     }
   else
     {
@@ -3067,10 +3067,10 @@ HandleCtrl(RTMP *r, const RTMPPacket *packet)
     {
       RTMP_Log(RTMP_LOGDEBUG, "%s, SWFVerification ping received: ", __FUNCTION__);
       if (packet->m_nBodySize > 2 && packet->m_body[2] > 0x01)
-	{
-	  RTMP_Log(RTMP_LOGERROR,
-		  "%s: SWFVerification Type %d request not supported, attempting to use SWFVerification Type 1! Patches welcome...",
-	    __FUNCTION__, packet->m_body[2]);
+        {
+          RTMP_Log(RTMP_LOGERROR,
+                   "%s: SWFVerification Type %d request not supported, attempting to use SWFVerification Type 1! Patches welcome...",
+                   __FUNCTION__, packet->m_body[2]);
 	}
 #ifdef CRYPTO
       /*RTMP_LogHex(packet.m_body, packet.m_nBodySize); */
@@ -3964,9 +3964,9 @@ HTTP_read(RTMP *r, int fill)
   if (hlen < 3584)
     while (resplen < hlen)
       {
-	if (RTMPSockBuf_Fill(&r->m_sb) == -1)
-	  return -1;
-	resplen = r->m_sb.sb_size - (ptr - r->m_sb.sb_start);
+        if (RTMPSockBuf_Fill(&r->m_sb) == -1)
+          return -1;
+        resplen = r->m_sb.sb_size - (ptr - r->m_sb.sb_start);
       }
   r->m_sb.sb_size -= ptr - r->m_sb.sb_start;
   r->m_sb.sb_start = ptr;
@@ -4723,7 +4723,7 @@ strsplit(char *src, int srclen, char delim, char ***params)
   while (sptr < srcend)
     {
       if (*sptr++ == delim)
-	count++;
+        count++;
     }
   sptr = srcbeg;
   *params = calloc(count, sizeof (size_t));

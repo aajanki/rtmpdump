@@ -622,12 +622,12 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 #endif
       AMFObjectProperty *Start = AMF_GetProp(&obj, NULL, 4);
       if (!(Start->p_type == AMF_INVALID))
-	StartFlag = AMFProp_GetNumber(Start);
+        StartFlag = AMFProp_GetNumber(Start);
       if (StartFlag < 0)
-	{
-	  server->arglen += 7;
-	  server->argc += 1;
-	}
+        {
+          server->arglen += 7;
+          server->argc += 1;
+        }
       if (r->Link.tcUrl.av_len)
 	{
 	  len = server->arglen + r->Link.playpath.av_len + 4 +
@@ -692,18 +692,18 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	      free(r->Link.usherToken.av_val);
 	      r->Link.usherToken.av_val = NULL;
 	      r->Link.usherToken.av_len = 0;
-	    }
-	  if (StartFlag < 0)
-	    {
-	      argv[argc].av_val = ptr + 1;
-	      argv[argc++].av_len = 6;
-	      ptr += sprintf(ptr, " --live");
-	    }
-	  if (r->Link.extras.o_num)
-	    {
-	      ptr = dumpAMF(&r->Link.extras, ptr, argv, &argc);
-	      AMF_Reset(&r->Link.extras);
-	    }
+            }
+          if (StartFlag < 0)
+            {
+              argv[argc].av_val = ptr + 1;
+              argv[argc++].av_len = 6;
+              ptr += sprintf(ptr, " --live");
+            }
+          if (r->Link.extras.o_num)
+            {
+              ptr = dumpAMF(&r->Link.extras, ptr, argv, &argc);
+              AMF_Reset(&r->Link.extras);
+            }
 	  argv[argc].av_val = ptr + 1;
 	  argv[argc++].av_len = 2;
 	  argv[argc].av_val = ptr + 5;
@@ -711,13 +711,13 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	    r->Link.playpath.av_len, r->Link.playpath.av_val);
 	  argv[argc++].av_len = r->Link.playpath.av_len;
 
-	  if (r->Link.playpath.av_len)
-	    av = r->Link.playpath;
-	  else
-	    {
-	      av.av_val = "file";
-	      av.av_len = 4;
-	    }
+          if (r->Link.playpath.av_len)
+            av = r->Link.playpath;
+          else
+            {
+              av.av_val = "file";
+              av.av_len = 4;
+            }
 	  /* strip trailing URL parameters */
 	  q = memchr(av.av_val, '?', av.av_len);
 	  if (q)
@@ -770,10 +770,10 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	  argv[argc].av_val = file;
 	  argv[argc].av_len = av.av_len;
 #ifdef VLC
-	  if (file_exists("C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"))
-	    ptr += sprintf(ptr, " | %s -", "\"C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe\"");
-	  else
-	    ptr += sprintf(ptr, " | %s -", "\"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe\"");
+          if (file_exists("C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"))
+            ptr += sprintf(ptr, " | %s -", "\"C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe\"");
+          else
+            ptr += sprintf(ptr, " | %s -", "\"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe\"");
 #else
 	  ptr += sprintf(ptr, " -o %s", file);
 #endif
@@ -791,21 +791,21 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	      free(server->filename.av_val);
 	      server->filename = argv[argc++];
 #ifdef VLC
-	      FILE *vlc_cmdfile = fopen("VLC.bat", "w");
-	      char *vlc_batchcmd = strreplace(cmd, 0, "%", "%%");
-	      fprintf(vlc_cmdfile, "%s\n", vlc_batchcmd);
-	      fclose(vlc_cmdfile);
-	      free(vlc_batchcmd);
-	      spawn_dumper(argc, argv, "VLC.bat");
+              FILE *vlc_cmdfile = fopen("VLC.bat", "w");
+              char *vlc_batchcmd = strreplace(cmd, 0, "%", "%%");
+              fprintf(vlc_cmdfile, "%s\n", vlc_batchcmd);
+              fclose(vlc_cmdfile);
+              free(vlc_batchcmd);
+              spawn_dumper(argc, argv, "VLC.bat");
 #else
 	      spawn_dumper(argc, argv, cmd);
 #endif
 
 #ifdef WIN32
-	      // Dump commands to batch file
-	      FILE *cmdfile = fopen("Command.bat", "a");
-	      fprintf(cmdfile, "%s\n", cmd);
-	      fclose(cmdfile);
+              // Dump commands to batch file
+              FILE *cmdfile = fopen("Command.bat", "a");
+              fprintf(cmdfile, "%s\n", cmd);
+              fclose(cmdfile);
 #endif
 	    }
 
@@ -1224,14 +1224,14 @@ strreplace(char *srcstr, int srclen, char *orig, char *repl)
   if ((ptr = strstr(srcstr, orig)))
     {
       while (ptr < srcend && (ptr = strstr(sptr, orig)))
-	{
-	  int len = ptr - sptr;
-	  memcpy(dptr, sptr, len);
-	  sptr += len + origlen;
-	  dptr += len;
-	  memcpy(dptr, repl, repllen);
-	  dptr += repllen;
-	}
+        {
+          int len = ptr - sptr;
+          memcpy(dptr, sptr, len);
+          sptr += len + origlen;
+          dptr += len;
+          memcpy(dptr, repl, repllen);
+          dptr += repllen;
+        }
       memcpy(dptr, sptr, srcend - sptr);
       return dststr;
     }
@@ -1254,33 +1254,33 @@ StripParams(AVal *src)
       char *ptr = start;
 
       while (ptr < end)
-	{
-	  if (*ptr == '?')
-	    {
-	      str.av_len = ptr - start;
-	      break;
-	    }
-	  ptr++;
-	}
+        {
+          if (*ptr == '?')
+            {
+              str.av_len = ptr - start;
+              break;
+            }
+          ptr++;
+        }
       memset(start + str.av_len, 0, 1);
 
       char *dynamic = strstr(start, "[[DYNAMIC]]");
       if (dynamic)
-	{
-	  dynamic -= 1;
-	  memset(dynamic, 0, 1);
-	  str.av_len = dynamic - start;
-	  end = start + str.av_len;
-	}
+        {
+          dynamic -= 1;
+          memset(dynamic, 0, 1);
+          str.av_len = dynamic - start;
+          end = start + str.av_len;
+        }
 
       char *import = strstr(start, "[[IMPORT]]");
       if (import)
-	{
-	  str.av_val = import + 11;
-	  strcpy(start, "http://");
-	  str.av_val = strcat(start, str.av_val);
-	  str.av_len = strlen(str.av_val);
-	}
+        {
+          str.av_val = import + 11;
+          strcpy(start, "http://");
+          str.av_val = strcat(start, str.av_val);
+          str.av_len = strlen(str.av_val);
+        }
       return str;
     }
   str = *src;
