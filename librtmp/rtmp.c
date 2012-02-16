@@ -2288,8 +2288,8 @@ RTMP_SendCtrl(RTMP *r, short nType, unsigned int nObject, unsigned int nTime)
     }
   else if (nType == 0x1A)
     {
-	  *buf = nObject & 0xff;
-	}
+      *buf = nObject & 0xff;
+    }
   else
     {
       if (nSize > 2)
@@ -2447,7 +2447,7 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
 	    {
 	      RTMP_SendServerBW(r);
 	      RTMP_SendCtrl(r, 3, 0, 300);
-            }
+	    }
           if (strstr(host, "tv-stream.to") || strstr(pageUrl, "tv-stream.to"))
             {
               AVal av_requestAccess = AVC("requestAccess");
@@ -2592,7 +2592,7 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
     }
   else if (AVMATCH(&method, &av_onBWDone))
     {
-	  if (!r->m_nBWCheckCounter)
+      if (!r->m_nBWCheckCounter)
         SendCheckBW(r);
     }
   else if (AVMATCH(&method, &av_onFCSubscribe))
@@ -3067,7 +3067,7 @@ HandleCtrl(RTMP *r, const RTMPPacket *packet)
     {
       RTMP_Log(RTMP_LOGDEBUG, "%s, SWFVerification ping received: ", __FUNCTION__);
       if (packet->m_nBodySize > 2 && packet->m_body[2] > 0x01)
-        {
+	{
           RTMP_Log(RTMP_LOGERROR,
                    "%s: SWFVerification Type %d request not supported, attempting to use SWFVerification Type 1! Patches welcome...",
                    __FUNCTION__, packet->m_body[2]);

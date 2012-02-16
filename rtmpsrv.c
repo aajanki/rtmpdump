@@ -97,8 +97,9 @@ STREAMING_SERVER *startStreaming(const char *address, int port);
 void stopStreaming(STREAMING_SERVER * server);
 void AVreplace(AVal *src, const AVal *orig, const AVal *repl);
 char *strreplace(char *srcstr, int srclen, char *orig, char *repl);
-AVal StripParams(AVal *src);
 int file_exists(const char *fname);
+int SendCheckBWResponse(RTMP *r, double txn);
+AVal StripParams(AVal *src);
 
 static const AVal av_dquote = AVC("\"");
 static const AVal av_escdquote = AVC("\\\"");
@@ -176,6 +177,8 @@ SAVC(level);
 SAVC(code);
 SAVC(description);
 SAVC(secureToken);
+SAVC(_checkbw);
+SAVC(_onbwdone);
 
 static int
 SendConnectResult(RTMP *r, double txn)
@@ -337,6 +340,33 @@ SendPlayStop(RTMP *r)
   *enc++ = AMF_OBJECT_END;
 
   packet.m_nBodySize = enc - packet.m_body;
+  return RTMP_SendPacket(r, &packet, FALSE);
+}
+
+int
+SendCheckBWResponse(RTMP *r, double txn)
+{
+  RTMPPacket packet;
+  char pbuf[256], *pend = pbuf + sizeof (pbuf);
+  char *enc;
+
+  packet.m_nChannel = 0x03; /* control channel (invoke) */
+  packet.m_headerType = RTMP_PACKET_SIZE_MEDIUM;
+  packet.m_packetType = RTMP_PACKET_TYPE_INVOKE;
+  packet.m_nTimeStamp = 0;
+  packet.m_nInfoField2 = 0;
+  packet.m_hasAbsTimestamp = 0;
+  packet.m_body = pbuf + RTMP_MAX_HEADER_SIZE;
+
+  enc = packet.m_body;
+  enc = AMF_EncodeString(enc, pend, &av__onbwdone);
+  enc = AMF_EncodeNumber(enc, pend, txn);
+  *enc++ = AMF_NULL;
+  enc = AMF_EncodeNumber(enc, pend, 10240);
+  enc = AMF_EncodeNumber(enc, pend, 10240);
+
+  packet.m_nBodySize = enc - packet.m_body;
+
   return RTMP_SendPacket(r, &packet, FALSE);
 }
 
@@ -602,6 +632,10 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
       server->argc += 2;
       r->Link.usherToken = usherToken;
     }
+  else if (AVMATCH(&method, &av__checkbw))
+    {
+      SendCheckBWResponse(r, txn);
+    }
   else if (AVMATCH(&method, &av_play))
     {
       char *file, *p, *q, *cmd, *ptr;
@@ -692,7 +726,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 	      free(r->Link.usherToken.av_val);
 	      r->Link.usherToken.av_val = NULL;
 	      r->Link.usherToken.av_len = 0;
-            }
+	    }
           if (StartFlag < 0)
             {
               argv[argc].av_val = ptr + 1;
