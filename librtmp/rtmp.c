@@ -2775,6 +2775,12 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
         }
       else
         {
+          AVal Playpath;
+          char *str = malloc(sizeof ("mp4:") + strlen(params[1]));
+          str = strcpy(str, "mp4:");
+          Playpath.av_val = strcat(str, params[1]);
+          Playpath.av_len = strlen(Playpath.av_val);
+          r->Link.playpath = Playpath;
           RTMP_SendCreateStream(r);
         }
     }
