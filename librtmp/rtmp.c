@@ -1418,7 +1418,7 @@ WriteN(RTMP *r, const char *buffer, int n)
     }
 #endif
 
-  if (r->Link.ConnectPacket && r->Link.CombineConnectPacket)
+  if (r->Link.ConnectPacket)
     {
       char *ConnectPacket = malloc(r->Link.HandshakeResponse.av_len + n);
       memcpy(ConnectPacket, r->Link.HandshakeResponse.av_val, r->Link.HandshakeResponse.av_len);
@@ -2137,10 +2137,8 @@ SendPlay(RTMP *r)
     enc = AMF_EncodeNumber(enc, pend, -1000.0);
   else
     {
-      if (r->Link.seekTime > 0.0)
-	enc = AMF_EncodeNumber(enc, pend, r->Link.seekTime);	/* resume from here */
-      else
-	enc = AMF_EncodeNumber(enc, pend, 0.0);	/*-2000.0);*/ /* recorded as default, -2000.0 is not reliable since that freezes the player if the stream is not found */
+      if (r->Link.seekTime > 0.0 || r->Link.stopTime)
+        enc = AMF_EncodeNumber(enc, pend, r->Link.seekTime); /* resume from here */
     }
   if (!enc)
     return FALSE;
@@ -2346,6 +2344,7 @@ AV_clear(RTMP_METHOD *vals, int num)
   free(vals);
 }
 
+SAVC(onBWCheck);
 SAVC(onBWDone);
 SAVC(onFCSubscribe);
 SAVC(onFCUnsubscribe);
@@ -2608,7 +2607,7 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
     {
       SendPong(r, txn);
     }
-  else if (AVMATCH(&method, &av__onbwcheck))
+  else if (AVMATCH(&method, &av__onbwcheck) || AVMATCH(&method, &av_onBWCheck))
     {
       SendCheckBWResult(r, txn);
     }
@@ -2752,11 +2751,15 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
               RTMP_SendCreateStream(r);
             }
           else if (AVMATCH(&av_Status, &av_UserLimit))
-            RTMP_Log(RTMP_LOGINFO, "No free slots available");
+            {
+              RTMP_Log(RTMP_LOGINFO, "No free slots available");
+              RTMP_Close(r);
+            }
           else if (AVMATCH(&av_Status, &av_TransferLimit))
             {
               AMFProp_GetString(AMF_GetProp(&Status, &av_TimeLeft, -1), &av_ReconnectionTime);
               RTMP_Log(RTMP_LOGINFO, "Viewing limit exceeded. try again in %.*s minutes.", av_ReconnectionTime.av_len, av_ReconnectionTime.av_val);
+              RTMP_Close(r);
             }
         }
     }

@@ -151,10 +151,10 @@ static const AVal av_NetStream_Play_Stop = AVC("NetStream.Play.Stop");
 static const AVal av_NetStream_Authenticate_UsherToken = AVC("NetStream.Authenticate.UsherToken");
 
 static const char *cst[] = { "client", "server" };
-static char *dumpAMF(AMFObject *obj, char *ptr);
-static char *strreplace(char *srcstr, int srclen, char *orig, char *repl);
-static AVal StripParams(AVal *src);
-static AVal AVcopy(AVal src);
+char *dumpAMF(AMFObject *obj, char *ptr);
+char *strreplace(char *srcstr, int srclen, char *orig, char *repl);
+AVal StripParams(AVal *src);
+AVal AVcopy(AVal src);
 
 // Returns 0 for OK/Failed/error, 1 for 'Stop or Complete'
 int

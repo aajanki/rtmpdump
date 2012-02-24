@@ -836,7 +836,7 @@ ServeInvoke(STREAMING_SERVER *server, RTMP * r, RTMPPacket *packet, unsigned int
 #endif
 
 #ifdef WIN32
-              // Dump commands to batch file
+              // Dump command to batch file
               FILE *cmdfile = fopen("Command.bat", "a");
               fprintf(cmdfile, "%s\n", cmd);
               fclose(cmdfile);
