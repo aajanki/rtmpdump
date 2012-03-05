@@ -59,6 +59,12 @@ returns 0 bytes, the stream is complete and may be closed using
 The session handle is freed using
 .BR RTMP_Free ().
 
+It is possible to set callback functions, which will be called in
+response to different types of incoming RTMP packets, with
+.BR RTMP_AttachCallback ().
+Callbacks can be removed using
+.BR RTMP_DetachCallback ().
+
 All data is transferred using FLV format. The basic session requires
 an RTMP URL.  The RTMP URL format is of the form
 .nf
@@ -186,6 +192,125 @@ Specify how many days to use the cached SWF info before re-checking. Use
 0 to always check the SWF URL. Note that if the check shows that the
 SWF file has the same modification timestamp as before, it will not be
 retrieved again.
+.P
+Further options can be provided by plugins.
+.SH PLUGIN INTERFACE
+librtmp can be extended by plugins. A plugin is a shared library that
+registers URL options and hook functions that will be called at
+certain points of an RTMP object lifecycle if a registered URL option
+is part of the URL passed to
+.BR RTMP_SetupURL().
+
+librtmp scans for plugins in
+.I $HOME/.librtmp/plugins
+and in
+.I $LIBDIR/librtmp/plugins
+(default
+.I /usr/local/lib/librtmp/plugins).
+
+The plugin interface is defined in
+.I librtmp/plugin.h.
+
+A shared library implements a plugin by exposing an instance of the
+following struct by passing it to
+.BR RTMP_PLUGIN_REGISTER()
+macro:
+
+.RS
+typedef struct RTMP_Plugin
+{
+  uint32_t requiredAPIVersion;
+  const AVal name;
+  const AVal version;
+  const AVal author;
+  const AVal homepage;
+  RTMPPluginOption *options;
+  void *(*create)(RTMP *r);
+  void (*delete)(RTMP *r, void *ctx);
+} RTMP_Plugin;
+.RE
+
+The 
+.I requiredAPIVersion
+field is the plugin API version (librtmp soname) for which this plugin
+is compiled for. If the the librtmp instance, which is trying to load
+this plugin, has different API version the plugin will not be loaded.
+
+The
+.I name,
+.I version, 
+.I author
+and 
+.I homepage
+fields are strings that will be shown in a plugin help message.
+
+.I options
+is an array of URL options that this plugin wants to register. There
+must be at least one option. The last item must be {0}. The user needs
+to explicitly activate the plugin by appending one of the registered
+options to the URL. This way one misbehaving plugin won't break all
+RTMP downloads. If none of the registered options are present, none of
+plugin's hooks will be called.
+
+.BI "void *create(RTMP *" r ")"
+is the first hook to be called if a registered URL option is present.
+This will be called only once for each plugin even if there are
+multiple matching URL options. When this is called, hostname, app and
+playpath properties have been initialized in
+.I r
+but the stream is not yet connected. The return value is a pointer to
+plugin's private data. It will be passed to other hooks but librtmp
+won't use it otherwise. This function is meant for allocating plugin's
+private data structures and setting callbacks (using
+.BR RTMP_AttachCallback())
+that implement whatever work the plugin is meant to do.
+
+.BI "void delete(RTMP *" r ", void *" ctx ")"
+hook will be called when the plugin instance is destroyed, usually by
+.BR RTMP_Free().
+The
+.I ctx
+parameter is the value returned by the 
+.BR create()
+hook. This function should free the memory allocated by the
+.BR create()
+and
+.BR parseOption()
+hooks.
+
+.I RTMPPluginOption
+is the following struct:
+
+.RS
+typedef struct RTMPPluginOption {
+  const AVal name;
+  const AVal type;
+  const AVal usage;
+  void (*parseOption)(const AVal *name, const AVal *val, void *ctx);
+} RTMPPluginOption;
+.RE
+
+The
+.I name
+field is the name of the option the plugin is registering.
+
+The
+.I type
+and
+.I usage
+fields are an option type ("int", "string", etc) and a short
+description to be displayed in the usage message.
+
+.BI "void parseOption(const AVal *" name ", const AVal *" val ", void *" ctx ")"
+hook will be called for each URL option, which the plugin has
+registered and is present in the URL. The 
+.I ctx
+parameter is the value returned by the 
+.BR create()
+hook. This function processes the option values and setups callbacks.
+
+The librtmp sources includes a simple example plugin in
+.I plugins/example.[ch].
 .SH EXAMPLES
 An example character string suitable for use with
 .BR RTMP_SetupURL ():
@@ -204,6 +329,12 @@ file.
 .TP
 .I $HOME/.swfinfo
 Cache of SWF Verification information
+.TP
+.I /usr/local/lib/librtmp/plugins
+Global plugin directory
+.TP
+.I $HOME/.librtmp/plugin
+Alternative plugin directory
 .SH "SEE ALSO"
 .BR rtmpdump (1),
 .BR rtmpgw (8)
