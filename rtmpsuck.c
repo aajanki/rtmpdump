@@ -1144,6 +1144,8 @@ main(int argc, char **argv)
 
   char *rtmpStreamingDevice = DEFAULT_RTMP_STREAMING_DEVICE;	// streaming device, default 0.0.0.0
   int nRtmpStreamingPort = 1935;	// port
+  
+  RTMP_GlobalInit();
 
   RTMP_LogPrintf("RTMP Proxy Server %s\n", RTMPDUMP_VERSION);
   RTMP_LogPrintf("(c) 2010 Andrej Stepanchuk, Howard Chu; license: GPL\n\n");

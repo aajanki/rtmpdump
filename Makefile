@@ -66,14 +66,21 @@ install:	$(PROGS)
 	cp rtmpgw.8 $(MANDIR)/man8
 	@cd librtmp; $(MAKE) install
 
+install_plugins: plugins
+	@cd plugins; $(MAKE) install
+
 clean:
 	rm -f *.o rtmpdump$(EXT) rtmpgw$(EXT) rtmpsrv$(EXT) rtmpsuck$(EXT)
 	@cd librtmp; $(MAKE) clean
+	@cd plugins; $(MAKE) clean
 
 FORCE:
 
 $(LIBRTMP): FORCE
 	@cd librtmp; $(MAKE) all
+
+plugins: FORCE
+	@cd plugins; $(MAKE) all
 
 rtmpdump: rtmpdump.o
 	$(CC) $(LDFLAGS) -o $@$(EXT) $@.o $(LIBS)

@@ -806,6 +806,8 @@ main(int argc, char **argv)
 
   /* sleep(30); */
 
+  RTMP_GlobalInit();
+
   RTMP_Init(&rtmp);
 
   int opt;

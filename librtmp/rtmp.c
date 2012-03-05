@@ -30,6 +30,7 @@
 
 #include "rtmp_sys.h"
 #include "log.h"
+#include "plugin.h"
 
 #ifdef CRYPTO
 #ifdef USE_POLARSSL
@@ -124,6 +125,8 @@ static int ExecuteCallback(RTMP *r, RTMPCallbackType type,
                            const RTMPPacket *packet);
 static void DetachAllCallbacks(RTMP *r);
 
+extern void InitializePlugins(void);
+
 #ifndef _WIN32
 static int clk_tck;
 #endif
@@ -131,6 +134,14 @@ static int clk_tck;
 #ifdef CRYPTO
 #include "handshake.h"
 #endif
+
+int
+RTMP_GlobalInit(void)
+{
+  InitializePlugins();
+
+  return TRUE;
+}
 
 uint32_t
 RTMP_GetTime()
@@ -242,6 +253,7 @@ void
 RTMP_Free(RTMP *r)
 {
   DetachAllCallbacks(r);
+  RTMPPlugin_DeleteInstances(r);
   free(r);
 }
 
@@ -525,6 +537,8 @@ static void RTMP_OptUsage()
     RTMP_Log(RTMP_LOGERROR, "%10s %-7s  %s\n", options[i].name.av_val,
     	optinfo[options[i].otype], options[i].use);
   }
+
+  RTMPPlugin_OptUsage(RTMP_LOGERROR);
 }
 
 static int
@@ -655,6 +669,10 @@ int RTMP_SetOpt(RTMP *r, const AVal *opt, AVal *arg)
     }
     break;
   }
+
+  if (RTMPPlugin_InitializePluginAndOpt(r, opt, arg))
+    return TRUE;
+
   if (!options[i].name.av_len) {
     RTMP_Log(RTMP_LOGERROR, "Unknown option %s", opt->av_val);
     RTMP_OptUsage();

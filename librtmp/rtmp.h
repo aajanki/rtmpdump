@@ -313,8 +313,11 @@ extern "C"
     RTMP_LNK Link;
 
     RTMPCallbackNode *callbacks;
+
+    struct RTMPPluginInstance *pluginInstances;
   } RTMP;
 
+  int RTMP_GlobalInit(void);
   int RTMP_ParseURL(const char *url, int *protocol, AVal *host,
 		     unsigned int *port, AVal *playpath, AVal *app);
 

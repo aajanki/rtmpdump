@@ -26,7 +26,10 @@ to the RTMP protocol. This man page gives an overview of the RTMP
 library routines. These routines are found in the -lrtmp library. Many
 other routines are also available, but they are not documented yet.
 
-The basic interaction is as follows. A session handle is created using
+The basic interaction is as follows. The global initialization routine
+.BR RTMP_GlobalInit ()
+must be called before any other librtmp function.
+A session handle is created using
 .BR RTMP_Alloc ()
 and initialized using
 .BR RTMP_Init ().
