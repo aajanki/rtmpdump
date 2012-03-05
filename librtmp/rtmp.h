@@ -134,6 +134,44 @@ extern "C"
     void *sb_ssl;
   } RTMPSockBuf;
 
+/* Return values for callback functions: */
+#define RTMP_CB_SUCCESS 0 /* callback was successful, stop processing */
+#define RTMP_CB_NOT_HANDLED 1 /* callback did not handle the event, try another callback */
+#define RTMP_CB_ERROR_STOP 2 /* log an error and stop processing */
+#define RTMP_CB_ERROR_CONTINUE 3 /* log an error and try another callback */
+
+  struct RTMP;
+
+  typedef int (RTMPPacketCallback)(struct RTMP *r, const RTMPPacket *packet, void *ctx);
+  typedef int (RTMPRPCCallback)(struct RTMP *r, const AVal *method, AMFObject *obj, void *ctx);
+  typedef int (RTMPMetadataCallback)(struct RTMP *r, AMFObject *obj, void *ctx);
+
+  typedef enum
+  {
+    RTMP_CALLBACK_PACKET   = 0,
+    RTMP_CALLBACK_RESULT   = 1,
+    RTMP_CALLBACK_INVOKE   = 2,
+    RTMP_CALLBACK_METADATA = 3,
+  } RTMPCallbackType;
+
+  typedef struct RTMPCallbackNode
+  {
+    struct RTMPCallbackNode *next;
+    RTMPCallbackType type;
+    union
+    {
+      RTMPPacketCallback *packet;
+      RTMPRPCCallback *result;
+      RTMPRPCCallback *invoke;
+      RTMPMetadataCallback *metadata;
+    } callback;
+    void *ctx;
+  } RTMPCallbackNode;
+
+  typedef void * RTMPCallbackHandle;
+
+#define RTMP_CALLBACK_HANDLE_INVALID NULL
+
   void RTMPPacket_Reset(RTMPPacket *p);
   void RTMPPacket_Dump(RTMPPacket *p);
   int RTMPPacket_Alloc(RTMPPacket *p, int nSize);
@@ -273,6 +311,8 @@ extern "C"
     RTMPPacket m_write;
     RTMPSockBuf m_sb;
     RTMP_LNK Link;
+
+    RTMPCallbackNode *callbacks;
   } RTMP;
 
   int RTMP_ParseURL(const char *url, int *protocol, AVal *host,
@@ -359,6 +399,55 @@ extern "C"
 /* hashswf.c */
   int RTMP_HashSWF(const char *url, unsigned int *size, unsigned char *hash,
 		   int age);
+
+  /*
+   * Add a callback function to r. Callbacks can be used to override
+   * and extend librtmp's default RTMP processing.
+   *
+   * The second parameter (type) specifies when the callback will be
+   * called and the third parameter (callback) is a pointer to a
+   * callback function of appropriate type (see below). The fourth
+   * parameter (ctx) is a user-defined pointer that will be passed to
+   * the callbacks as their last parameter. 
+   *
+   * Callback function's return value must be one of RTMP_CB_*
+   * constants.
+   *
+   * The available callbacks and the corresponding function types:
+   *
+   * type: RTMP_CALLBACK_PACKET, callback must be a RTMPPacketCallback
+   *
+   * The callback will be called for every incoming RTMP packet.
+   *
+   * type: RTMP_CALLBACK_RESULT, callback must a RTMPRPCCallback
+   *
+   * The callback will be called when the server send a response to
+   * client's remote procedure call. Callback's method argument is the
+   * name of the remote procedure and obj argument is the result as an
+   * AMF object.
+   * 
+   * type: RTMP_CALLBACK_INVOKE, callback must a RTMPRPCCallback
+   *
+   * The callback will be called when the server invokes a method on
+   * the client. Callback's method argument is the name of the invoked
+   * method and the obj are the method parameters encoded as an AMF
+   * object.
+   *
+   * type: RTMP_CALLBACK_METADATA, callback must a RTMPMetadataCallback
+   *
+   * The callback will be called when the client receives stream
+   * metadata.
+   */
+  RTMPCallbackHandle RTMP_AttachCallback(RTMP *r,
+                                         RTMPCallbackType type,
+                                         void(*callback)(void),
+                                         void *ctx);
+  /*
+   * Remove a callback which was previously added by
+   * RTMP_AttachCallback(). handle is the return value of the
+   * RTMP_AttachCallback() call.
+   */
+  void RTMP_DetachCallback(RTMP *r, RTMPCallbackHandle handle);
 
 #ifdef __cplusplus
 };

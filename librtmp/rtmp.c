@@ -119,6 +119,11 @@ static void DecodeTEA(AVal *key, AVal *text);
 static int HTTP_Post(RTMP *r, RTMPTCmd cmd, const char *buf, int len);
 static int HTTP_read(RTMP *r, int fill);
 
+static int ExecuteCallback(RTMP *r, RTMPCallbackType type,
+                           AMFObject *obj, const AVal *aval,
+                           const RTMPPacket *packet);
+static void DetachAllCallbacks(RTMP *r);
+
 #ifndef _WIN32
 static int clk_tck;
 #endif
@@ -236,6 +241,7 @@ RTMP_Alloc()
 void
 RTMP_Free(RTMP *r)
 {
+  DetachAllCallbacks(r);
   free(r);
 }
 
@@ -1109,6 +1115,23 @@ int
 RTMP_ClientPacket(RTMP *r, RTMPPacket *packet)
 {
   int bHasMediaPacket = 0;
+  if (ExecuteCallback(r, RTMP_CALLBACK_PACKET, NULL, NULL, packet))
+    {
+      switch (packet->m_packetType)
+        {
+        case RTMP_PACKET_TYPE_AUDIO:
+        case RTMP_PACKET_TYPE_VIDEO:
+        case RTMP_PACKET_TYPE_INFO:
+        case RTMP_PACKET_TYPE_FLASH_VIDEO:
+          return 1;
+        case RTMP_PACKET_TYPE_FLEX_MESSAGE:
+        case RTMP_PACKET_TYPE_INVOKE:
+          return 2;
+        default:
+          return 0;
+        }
+    }
+
   switch (packet->m_packetType)
     {
     case RTMP_PACKET_TYPE_CHUNK_SIZE:
@@ -2360,6 +2383,10 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
   txn = AMFProp_GetNumber(AMF_GetProp(&obj, NULL, 1));
   RTMP_Log(RTMP_LOGDEBUG, "%s, server invoking <%s>", __FUNCTION__, method.av_val);
 
+  if (!AVMATCH(&method, &av__result) &&
+      ExecuteCallback(r, RTMP_CALLBACK_INVOKE, &obj, &method, NULL))
+    goto leave;
+
   if (AVMATCH(&method, &av__result))
     {
       AVal methodInvoked = {0};
@@ -2380,6 +2407,9 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
 
       RTMP_Log(RTMP_LOGDEBUG, "%s, received result for method call <%s>", __FUNCTION__,
 	  methodInvoked.av_val);
+
+      if (ExecuteCallback(r, RTMP_CALLBACK_RESULT, &obj, &methodInvoked, NULL))
+        goto leave;
 
       if (AVMATCH(&methodInvoked, &av_connect))
 	{
@@ -2698,7 +2728,10 @@ HandleMetadata(RTMP *r, char *body, unsigned int len)
   AMF_Dump(&obj);
   AMFProp_GetString(AMF_GetProp(&obj, NULL, 0), &metastring);
 
-  if (AVMATCH(&metastring, &av_onMetaData))
+  if (ExecuteCallback(r, RTMP_CALLBACK_METADATA, &obj, NULL, NULL))
+    ret = TRUE;
+
+  else if (AVMATCH(&metastring, &av_onMetaData))
     {
       AMFObjectProperty prop;
       /* Show metadata */
@@ -4457,4 +4490,153 @@ RTMP_Write(RTMP *r, const char *buf, int size)
 	}
     }
   return size+s2;
+}
+
+/* return value of FALSE means unhandled, continue processing,
+ * return value of TRUE means stop processing.
+ */
+static int
+ExecuteCallback(RTMP *r, RTMPCallbackType type, AMFObject *obj,
+                const AVal *aval, const RTMPPacket *packet)
+{
+  RTMPCallbackNode *node;
+  int res;
+
+  node = r->callbacks;
+  while (node)
+    {
+      if (node->type != type)
+        {
+          node = node->next;
+          continue;
+        }
+
+      switch (type)
+        {
+        case RTMP_CALLBACK_PACKET:
+          res = node->callback.packet(r, packet, node->ctx);
+          break;
+        case RTMP_CALLBACK_RESULT:
+          res = node->callback.result(r, aval, obj, node->ctx);
+          break;
+        case RTMP_CALLBACK_INVOKE:
+          res = node->callback.invoke(r, aval, obj, node->ctx);
+          break;
+        case RTMP_CALLBACK_METADATA:
+          res = node->callback.metadata(r, obj, node->ctx);
+          break;
+        default:
+          res = RTMP_CB_NOT_HANDLED;
+        }
+
+      switch(res)
+        {
+        case RTMP_CB_NOT_HANDLED:
+          break;
+        case RTMP_CB_SUCCESS:
+          return TRUE;
+        case RTMP_CB_ERROR_STOP:
+          RTMP_Log(RTMP_LOGWARNING, "%s, callback of type %d returned abort error code", __FUNCTION__, type);
+          return TRUE;
+        default:
+          RTMP_Log(RTMP_LOGWARNING, "%s, callback of type %d returned error code <%i>", __FUNCTION__, type, res);
+        }
+
+      node = node->next;
+    }
+
+  return FALSE;
+}
+
+RTMPCallbackHandle
+RTMP_AttachCallback(RTMP *r, RTMPCallbackType type, void(*callback)(void), void *ctx)
+{
+  RTMPCallbackNode *data, *node;
+
+  if (!callback)
+    return RTMP_CALLBACK_HANDLE_INVALID;
+
+  data = malloc(sizeof(RTMPCallbackNode));
+  if (!data)
+    return RTMP_CALLBACK_HANDLE_INVALID;
+
+  data->next = NULL;
+  data->ctx = ctx;
+  data->type = type;
+  switch (type)
+    {
+    case RTMP_CALLBACK_PACKET:
+      data->callback.packet = (RTMPPacketCallback *)callback;
+      break;
+    case RTMP_CALLBACK_RESULT:
+      data->callback.result = (RTMPRPCCallback *)callback;
+      break;
+    case RTMP_CALLBACK_INVOKE:
+      data->callback.invoke = (RTMPRPCCallback *)callback;
+      break;
+    case RTMP_CALLBACK_METADATA:
+      data->callback.metadata = (RTMPMetadataCallback *)callback;
+      break;
+    default:
+      RTMP_Log(RTMP_LOGERROR, "Invalid callback type: %d", type);
+      free(data);
+      return RTMP_CALLBACK_HANDLE_INVALID;
+    }
+
+  if (r->callbacks)
+    {
+      node = r->callbacks;
+      while (node->next)
+        node = node->next;
+      node->next = data;
+    }
+  else
+    {
+      r->callbacks = data;
+    }
+
+  return data;  
+}
+
+void
+RTMP_DetachCallback(RTMP *r, RTMPCallbackHandle handle)
+{
+  RTMPCallbackNode *cb, *node;
+
+  cb = handle;
+  if (handle == RTMP_CALLBACK_HANDLE_INVALID)
+    return;
+
+  if (r->callbacks == cb)
+    {
+      r->callbacks = r->callbacks->next;
+      free(cb);
+    }
+  else
+    {
+      node = r->callbacks;
+      while (node && node->next != cb)
+        node = node->next;
+
+      if (node)
+        {
+          node->next = cb->next;
+          free(cb);
+        }
+    }
+}
+
+void DetachAllCallbacks(RTMP *r)
+{
+  RTMPCallbackNode *node, *next;
+
+  node = r->callbacks;
+  while (node)
+    {
+      next = node->next;
+      free(node);
+      node = next;
+    }
+
+  r->callbacks = NULL;
 }
