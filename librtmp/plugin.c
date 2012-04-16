@@ -97,7 +97,7 @@ void InitializePlugins(void)
     }
 
   const char *extraplugindir = getenv("RTMPDUMP_PLUGINDIR");
-  if (extraplugindir)
+  if (extraplugindir && strcmp(extraplugindir, PLUGINDIR) != 0)
     LoadPlugins(extraplugindir);
 
   LoadPlugins(PLUGINDIR);
