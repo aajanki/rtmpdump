@@ -96,7 +96,7 @@ void InitializePlugins(void)
         }
     }
 
-  const char *extraplugindir = getenv("RTMPDUMP_PLUGINDIR");
+  const char *extraplugindir = getenv("LIBRTMP_PLUGINDIR");
   if (extraplugindir && strcmp(extraplugindir, PLUGINDIR) != 0)
     LoadPlugins(extraplugindir);
 
