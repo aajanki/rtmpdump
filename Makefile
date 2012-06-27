@@ -32,7 +32,7 @@ BINDIR=$(DESTDIR)$(bindir)
 SBINDIR=$(DESTDIR)$(sbindir)
 MANDIR=$(DESTDIR)$(mandir)
 
-LIBS_posix=
+LIBS_posix=-lm
 LIBS_darwin=
 LIBS_mingw=-lws2_32 -lwinmm -lgdi32
 LIB_RTMP=-Llibrtmp -lrtmp
